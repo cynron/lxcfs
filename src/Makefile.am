@@ -23,7 +23,7 @@ liblxcfs_la_SOURCES = api_extensions.h \
 		      proc_loadavg.c proc_loadavg.h \
 		      syscall_numbers.h \
 		      sysfs_fuse.c sysfs_fuse.h \
-		      utils.c utils.h
+		      utils.c utils.h info_from_env.c info_from_env.h
 liblxcfs_la_CFLAGS = $(AM_CFLAGS)
 
 if ENABLE_ASAN
@@ -53,7 +53,7 @@ liblxcfstest_la_SOURCES = api_extensions.h \
 			  proc_loadavg.c proc_loadavg.h \
 			  syscall_numbers.h \
 			  sysfs_fuse.c sysfs_fuse.h \
-			  utils.c utils.h
+			  utils.c utils.h info_from_env.c info_from_env.h
 liblxcfstest_la_CFLAGS = $(AM_CFLAGS) -DRELOADTEST
 
 if ENABLE_ASAN
@@ -82,7 +82,8 @@ noinst_HEADERS = api_extensions.h \
 		 proc_loadavg.h \
 		 syscall_numbers.h \
 		 sysfs_fuse.h \
-		 utils.h
+		 utils.h \
+		 info_from_env.h
 
 sodir=$(libdir)
 lxcfs_LTLIBRARIES = liblxcfs.la
