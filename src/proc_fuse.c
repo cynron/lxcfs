@@ -933,7 +933,7 @@ static int proc_stat_read(char *buf, size_t size, off_t offset,
 		if (cgroup_ops->can_use_cpuview(cgroup_ops) && opts && opts->use_cfs) {
 			total_len = cpuview_proc_stat(cg, cpuset, cg_cpu_usage,
 						      cg_cpu_usage_size, f,
-						      d->buf, d->buflen);
+						      d->buf, d->buflen, initpid);
 			goto out;
 		}
 	} else {

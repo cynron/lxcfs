@@ -55,6 +55,7 @@
 #include "memory_utils.h"
 #include "proc_loadavg.h"
 #include "utils.h"
+#include "info_from_env.h"
 
 /* Data for CPU view */
 struct cg_proc_stat {
@@ -515,7 +516,7 @@ int max_cpu_count(const char *cg)
 
 int cpuview_proc_stat(const char *cg, const char *cpuset,
 		      struct cpuacct_usage *cg_cpu_usage, int cg_cpu_usage_size,
-		      FILE *f, char *buf, size_t buf_size)
+		      FILE *f, char *buf, size_t buf_size, pid_t initpid)
 {
 	__do_free char *line = NULL;
 	__do_free struct cpuacct_usage *diff = NULL;
@@ -527,7 +528,7 @@ int cpuview_proc_stat(const char *cg, const char *cpuset,
 		 softirq = 0, steal = 0, guest = 0, guest_nice = 0;
 	uint64_t user_sum = 0, system_sum = 0, idle_sum = 0;
 	uint64_t user_surplus = 0, system_surplus = 0;
-	int nprocs, max_cpus;
+	int nprocs, max_cpus, max_cpus_env;
 	ssize_t l;
 	uint64_t total_sum, threshold;
 	struct cg_proc_stat *stat_node;
@@ -603,6 +604,12 @@ int cpuview_proc_stat(const char *cg, const char *cpuset,
 
 	/* Cannot use more CPUs than is available in cpuset. */
 	max_cpus = max_cpu_count(cg);
+
+	max_cpus_env = max_cpu_count_env(initpid);
+	if (max_cpus_env != -1) {
+		max_cpus = max_cpus_env;
+	}
+
 	if (max_cpus > cpu_cnt || !max_cpus)
 		max_cpus = cpu_cnt;
 
@@ -721,6 +728,10 @@ int cpuview_proc_stat(const char *cg, const char *cpuset,
 
 		/* revise cpu usage view to support partial cpu case. */
 		exact_cpus = exact_cpu_count(cg);
+		if (max_cpus_env != -1) {
+			exact_cpus = max_cpus;
+		}
+
 		if (exact_cpus < (double)max_cpus){
 			uint64_t delta = (uint64_t)((double)(diff_user + diff_system + diff_idle) * (1 - exact_cpus / (double)max_cpus));
 
@@ -883,6 +894,7 @@ int proc_cpuinfo_read(char *buf, size_t size, off_t offset,
 	bool use_view;
 	char *cache = d->buf;
 	size_t cache_size = d->buflen;
+	int max_cpus_env = 0;
 
 	if (offset) {
 		int left;
@@ -919,6 +931,11 @@ int proc_cpuinfo_read(char *buf, size_t size, off_t offset,
 		use_view = false;
 	if (use_view)
 		max_cpus = max_cpu_count(cg);
+
+	max_cpus_env = max_cpu_count_env(initpid);
+	if (max_cpus_env != -1) {
+		max_cpus = max_cpus_env;
+	}
 
 	f = fopen_cached("/proc/cpuinfo", "re", &fopen_cache);
 	if (!f)
