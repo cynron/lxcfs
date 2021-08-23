@@ -83,7 +83,7 @@ out:
 	return ret;
 }
 
-int max_cpu_count_env(pid_t pid)
+int max_cpu_count_from_env(pid_t pid)
 {
 	char *env_prefix;
 	char env_key[STR_MAX_LEN] = {0};
@@ -110,7 +110,7 @@ int max_cpu_count_env(pid_t pid)
 	return -1;
 }
 
-uint64_t mem_limit_env(pid_t pid)
+uint64_t mem_limit_from_env(pid_t pid)
 {
 	char *env_prefix;
 	char env_key[STR_MAX_LEN] = {0};

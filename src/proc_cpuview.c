@@ -605,7 +605,7 @@ int cpuview_proc_stat(const char *cg, const char *cpuset,
 	/* Cannot use more CPUs than is available in cpuset. */
 	max_cpus = max_cpu_count(cg);
 
-	max_cpus_env = max_cpu_count_env(initpid);
+	max_cpus_env = max_cpu_count_from_env(initpid);
 	if (max_cpus_env != -1) {
 		max_cpus = max_cpus_env;
 	}
@@ -932,7 +932,7 @@ int proc_cpuinfo_read(char *buf, size_t size, off_t offset,
 	if (use_view)
 		max_cpus = max_cpu_count(cg);
 
-	max_cpus_env = max_cpu_count_env(initpid);
+	max_cpus_env = max_cpu_count_from_env(initpid);
 	if (max_cpus_env != -1) {
 		max_cpus = max_cpus_env;
 	}

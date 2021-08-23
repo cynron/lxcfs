@@ -57,6 +57,7 @@
 #include "proc_loadavg.h"
 #include "proc_cpuview.h"
 #include "utils.h"
+#include "info_from_env.h"
 
 struct memory_stat {
 	uint64_t hierarchical_memory_limit;
@@ -325,7 +326,7 @@ static int proc_swaps_read(char *buf, size_t size, off_t offset,
 	struct file_info *d = INTTYPE_TO_PTR(fi->fh);
 	uint64_t memswlimit = 0, memlimit = 0, memusage = 0, memswusage = 0,
 		 swtotal = 0, swusage = 0, memswpriority = 1,
-		 hostswtotal = 0, hostswfree = 0;
+		 hostswtotal = 0, hostswfree = 0, memlimit_env = 0;
 	ssize_t total_len = 0;
 	ssize_t l = 0;
 	char *cache = d->buf;
@@ -361,6 +362,14 @@ static int proc_swaps_read(char *buf, size_t size, off_t offset,
 	prune_init_slice(cgroup);
 
 	memlimit = get_min_memlimit(cgroup, false);
+	memlimit_env = mem_limit_from_env(initpid);
+	if (memlimit_env != -1) {
+		if (memlimit_env <= memusage) {
+			memlimit_env = memusage + 1024*1024*100;
+		}
+		memlimit = memlimit_env;
+	}
+
 
 	ret = cgroup_ops->get_memory_current(cgroup_ops, cgroup, &memusage_str);
 	if (ret < 0)
@@ -1159,7 +1168,7 @@ static int proc_meminfo_read(char *buf, size_t size, off_t offset,
 	struct file_info *d = INTTYPE_TO_PTR(fi->fh);
 	uint64_t memlimit = 0, memusage = 0, memswlimit = 0, memswusage = 0,
 		 hosttotal = 0, swfree = 0, swusage = 0, swtotal = 0,
-		 memswpriority = 1;
+		 memswpriority = 1, memlimit_env = 0;
 	struct memory_stat mstat = {};
 	size_t linelen = 0, total_len = 0;
 	char *cache = d->buf;
@@ -1204,6 +1213,14 @@ static int proc_meminfo_read(char *buf, size_t size, off_t offset,
 		return read_file_fuse("/proc/meminfo", buf, size, d);
 
 	memlimit = get_min_memlimit(cgroup, false);
+	memlimit_env = mem_limit_from_env(initpid);
+	if (memlimit_env != -1) {
+		if (memlimit_env <= memusage) {
+			memlimit_env = memusage + 1024*1024*100;
+		}
+		memlimit = memlimit_env;
+	}
+
 
 	/*
 	 * Following values are allowed to fail, because swapaccount might be
