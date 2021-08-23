@@ -52,6 +52,7 @@
 #include "lxcfs_fuse_compat.h"
 #include "sysfs_fuse.h"
 #include "utils.h"
+#include "info_from_env.h"
 
 static int sys_devices_system_cpu_online_read(char *buf, size_t size,
 					      off_t offset,
@@ -67,6 +68,7 @@ static int sys_devices_system_cpu_online_read(char *buf, size_t size,
 	int max_cpus = 0;
 	pid_t initpid;
 	ssize_t total_len = 0;
+	int max_cpus_env = -1;
 
 	if (offset) {
 		int left;
@@ -103,6 +105,11 @@ static int sys_devices_system_cpu_online_read(char *buf, size_t size,
 		use_view = false;
 	if (use_view)
 		max_cpus = max_cpu_count(cg);
+
+	max_cpus_env = max_cpu_count_from_env(initpid);
+	if (max_cpus_env != -1) {
+		max_cpus = max_cpus_env;
+	}
 
 	if (use_view) {
 		if (max_cpus > 1)
