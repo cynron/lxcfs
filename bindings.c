@@ -3517,6 +3517,7 @@ static int proc_meminfo_read(char *buf, size_t size, off_t offset,
 		cached = 0, hosttotal = 0, active_anon = 0, inactive_anon = 0,
 		active_file = 0, inactive_file = 0, unevictable = 0, shmem = 0,
 		hostswtotal = 0;
+	unsigned long memlimit_env = -1;
 	char *line = NULL;
 	size_t linelen = 0, total_len = 0, rv = 0;
 	char *cache = d->buf;
@@ -3548,6 +3549,16 @@ static int proc_meminfo_read(char *buf, size_t size, off_t offset,
 	if (!cgfs_get_value("memory", cg, "memory.stat", &memstat_str))
 		goto err;
 
+	memusage = strtoul(memusage_str, NULL, 10);
+
+	memlimit_env = mem_limit_from_env(initpid);
+	if (memlimit_env != -1) {
+		if (memlimit_env < memusage) {
+			memlimit_env = memusage + 1024 * 1024 * 100;
+		}
+		memlimit = memlimit_env;
+	}
+
 	// Following values are allowed to fail, because swapaccount might be turned
 	// off for current kernel
 	if(cgfs_get_value("memory", cg, "memory.memsw.limit_in_bytes", &memswlimit_str) &&
@@ -3556,11 +3567,15 @@ static int proc_meminfo_read(char *buf, size_t size, off_t offset,
 		memswlimit = get_min_memlimit(cg, "memory.memsw.limit_in_bytes");
 		memswusage = strtoul(memswusage_str, NULL, 10);
 
+		if (memlimit_env != -1) {
+			memswlimit = memlimit;
+			memswusage = memusage;
+		}
+
 		memswlimit = memswlimit / 1024;
 		memswusage = memswusage / 1024;
 	}
 
-	memusage = strtoul(memusage_str, NULL, 10);
 	memlimit /= 1024;
 	memusage /= 1024;
 
@@ -5456,6 +5471,7 @@ static int proc_swaps_read(char *buf, size_t size, off_t offset,
 	ssize_t total_len = 0, rv = 0;
 	ssize_t l = 0;
 	char *cache = d->buf;
+	unsigned long memlimit_env = 0;
 
 	if (offset) {
 		if (offset > d->size)
@@ -5478,16 +5494,30 @@ static int proc_swaps_read(char *buf, size_t size, off_t offset,
 
 	memlimit = get_min_memlimit(cg, "memory.limit_in_bytes");
 
+
 	if (!cgfs_get_value("memory", cg, "memory.usage_in_bytes", &memusage_str))
 		goto err;
 
 	memusage = strtoul(memusage_str, NULL, 10);
+
+	memlimit_env = mem_limit_from_env(initpid);
+	if (memlimit_env != -1) {
+		if (memlimit_env < memusage) {
+			memlimit_env = memusage + 1024 * 1024 *100;
+		}
+		memlimit = memlimit_env;
+	}
 
 	if (cgfs_get_value("memory", cg, "memory.memsw.usage_in_bytes", &memswusage_str) &&
 	    cgfs_get_value("memory", cg, "memory.memsw.limit_in_bytes", &memswlimit_str)) {
 
 		memswlimit = get_min_memlimit(cg, "memory.memsw.limit_in_bytes");
 		memswusage = strtoul(memswusage_str, NULL, 10);
+
+		if (memlimit_env != -1) {
+			memswlimit = memlimit;
+			memswusage = memusage;
+		}
 
 		swap_total = (memswlimit - memlimit) / 1024;
 		swap_free = (memswusage - memusage) / 1024;
