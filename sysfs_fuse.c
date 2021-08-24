@@ -33,6 +33,7 @@
 #include "bindings.h"
 #include "config.h" // for VERSION
 #include "sysfs_fuse.h"
+#include "info_from_env.h"
 
 static int sys_devices_system_cpu_online_read(char *buf, size_t size,
 					      off_t offset,
@@ -46,6 +47,7 @@ static int sys_devices_system_cpu_online_read(char *buf, size_t size,
 	bool use_view;
 
 	int max_cpus = 0;
+	int max_cpus_env = -1;
 	pid_t initpid;
 	ssize_t total_len = 0;
 
@@ -76,6 +78,11 @@ static int sys_devices_system_cpu_online_read(char *buf, size_t size,
 
 	if (use_view)
 		max_cpus = max_cpu_count(cg);
+
+	max_cpus_env = max_cpu_count_from_env(initpid);
+	if (max_cpus_env != -1) {
+		max_cpus = max_cpus_env;
+	}
 
 	if (max_cpus == 0)
 		return read_file("/sys/devices/system/cpu/online", buf, size, d);
