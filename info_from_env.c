@@ -3,10 +3,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <pthread.h>
 
 #include "info_from_env.h"
 
 #define STR_MAX_LEN 64
+
+static pthread_once_t env_once = PTHREAD_ONCE_INIT;
+static char *env_prefix;
+
+static void get_env_prefix_once()
+{
+	env_prefix = getenv("INFO_FROM_ENV_PREFIX");
+}
 
 static int get_from_environ(pid_t pid, char *key, char* out)
 {
@@ -84,12 +93,12 @@ out:
 
 int max_cpu_count_from_env(pid_t pid)
 {
-	char *env_prefix;
 	char env_key[STR_MAX_LEN] = {0};
 	char val[STR_MAX_LEN] = {0};
 	int r;
 
-	env_prefix = getenv("INFO_FROM_ENV_PREFIX");
+	pthread_once(&env_once, get_env_prefix_once);
+
 	if (env_prefix == NULL) {
 		return -1;
 	}
@@ -111,12 +120,11 @@ int max_cpu_count_from_env(pid_t pid)
 
 uint64_t mem_limit_from_env(pid_t pid)
 {
-	char *env_prefix;
 	char env_key[STR_MAX_LEN] = {0};
 	char val[STR_MAX_LEN] = {0};
 	uint64_t r;
 
-	env_prefix = getenv("INFO_FROM_ENV_PREFIX");
+	pthread_once(&env_once, get_env_prefix_once);
 	if (env_prefix == NULL) {
 		return -1;
 	}
