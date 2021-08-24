@@ -89,3 +89,28 @@ docker run -it -m 256m --memory-swap 256m \
  In a system with swap enabled, the parameter "-u" can be used to set all values in "meminfo" that refer to the swap to 0.
 
  sudo lxcfs -u /var/lib/lxcfs
+
+## Extract cpu count and memory limit from environment
+
+Enable env variable `INFO_FROM_ENV_PREFIX` first,  then set according env to container。
+
+```
+// start lxcfs
+
+# INFO_FROM_ENV_PREFIX=COLOCATION ./lxcfs  /usr/local/var/lib/lxcfs
+```
+
+```
+// start docker container
+
+# docker run -it  --cpu-quota 20000 --cpu-period 10000 --cpu-shares 1024 -m 256m \
+      -v /usr/local/var/lib/lxcfs/proc/cpuinfo:/proc/cpuinfo:rw \
+      -v /usr/local/var/lib/lxcfs/proc/diskstats:/proc/diskstats:rw \
+      -v /usr/local/var/lib/lxcfs/proc/meminfo:/proc/meminfo:rw \
+      -v /usr/local/var/lib/lxcfs/proc/stat:/proc/stat:rw \
+      -v /usr/local/var/lib/lxcfs/proc/swaps:/proc/swaps:rw \
+      -e 'COLOCATION_AVAIL_CPU_COUNT=3' \
+      -e 'COLOCATION_AVAIL_MEM_IN_BYTES=512000000' \
+      ubuntu:18.04 /bin/bash
+```
+
