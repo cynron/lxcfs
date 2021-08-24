@@ -40,6 +40,7 @@
 #include "bindings.h"
 #include "memory_utils.h"
 #include "config.h"
+#include "info_from_env.h"
 
 /* Define pivot_root() if missing from the C library */
 #ifndef HAVE_PIVOT_ROOT
@@ -3868,6 +3869,8 @@ static int proc_cpuinfo_read(char *buf, size_t size, off_t offset,
 	char *cache = d->buf;
 	size_t cache_size = d->buflen;
 	FILE *f = NULL;
+	int max_cpus_env = -1;
+
 
 	if (offset){
 		if (offset > d->size)
@@ -3896,6 +3899,11 @@ static int proc_cpuinfo_read(char *buf, size_t size, off_t offset,
 
 	if (use_view)
 		max_cpus = max_cpu_count(cg);
+
+	max_cpus_env = max_cpu_count_from_env(initpid);
+	if (max_cpus_env != -1) {
+		max_cpus = max_cpus_env;
+	}
 
 	f = fopen("/proc/cpuinfo", "r");
 	if (!f)
@@ -4595,7 +4603,7 @@ static void reset_proc_stat_node(struct cg_proc_stat *node, struct cpuacct_usage
 	node->cpu_count = cpu_count;
 }
 
-static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_usage *cg_cpu_usage, int cg_cpu_usage_size, FILE *f, char *buf, size_t buf_size)
+static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_usage *cg_cpu_usage, int cg_cpu_usage_size, FILE *f, char *buf, size_t buf_size, pid_t initpid)
 {
 	char *line = NULL;
 	size_t linelen = 0, total_len = 0, rv = 0, l;
@@ -4609,6 +4617,7 @@ static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_
 	struct cg_proc_stat *stat_node;
 	struct cpuacct_usage *diff = NULL;
 	int nprocs = get_nprocs_conf();
+	int max_cpus_env = -1;
 
 	if (cg_cpu_usage_size < nprocs)
 		nprocs = cg_cpu_usage_size;
@@ -4679,6 +4688,11 @@ static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_
 					curcpu, cg, all_used, cg_used);
 			cg_cpu_usage[curcpu].idle = idle;
 		}
+	}
+
+	max_cpus_env = max_cpu_count_from_env(initpid);
+	if (max_cpus_env != -1) {
+		max_cpus = max_cpus_env;
 	}
 
 	/* Cannot use more CPUs than is available due to cpuset */
@@ -4809,6 +4823,10 @@ static int cpuview_proc_stat(const char *cg, const char *cpuset, struct cpuacct_
 
 		// revise cpu usage view to support partial cpu case
 		double exact_cpus = exact_cpu_count(cg);
+		if (max_cpus_env != -1) {
+			exact_cpus = max_cpus;
+		}
+
 		if (exact_cpus < (double)max_cpus){
 			lxcfs_v("revising cpu usage view to match the exact cpu count [%f]\n", exact_cpus);
 			unsigned long delta = (unsigned long)((double)(diff_user + diff_system + diff_idle) * (1 - exact_cpus / (double)max_cpus));
@@ -5023,7 +5041,7 @@ static int proc_stat_read(char *buf, size_t size, off_t offset,
 
 	if (use_cpuview(cg) && cg_cpu_usage) {
 		total_len = cpuview_proc_stat(cg, cpuset, cg_cpu_usage, cg_cpu_usage_size,
-				f, d->buf, d->buflen);
+				f, d->buf, d->buflen, initpid);
 		goto out;
 	}
 
